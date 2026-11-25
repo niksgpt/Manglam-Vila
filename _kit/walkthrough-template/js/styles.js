@@ -76,10 +76,7 @@
     map(M.teak, t.wood); map(M.teakV, t.woodV); map(M.walnut, t.dark); map(M.fluted, t.flute);
     M.brass.color.setHex(st.accent.c); M.brass.roughness = st.accent.r; M.brass.metalness = st.accent.m;
     M.frame.color.setHex(st.frame); M.frame.metalness = name === 'scandi' ? 0.1 : 0.6;
-    // doors and windows share one colour: dark timber (Modern, Warm luxury) or white paint (Scandinavian)
-    if (name === 'scandi') { M.joinery.map = null; M.joinery.color.setHex(0xf3f1ec); M.joinery.roughness = 0.5; }
-    else { M.joinery.map = t.darkV; M.joinery.color.setHex(0xffffff); M.joinery.roughness = 0.42; }
-    M.joinery.needsUpdate = true;
+    // doors and windows keep the architect's oak veneer ('joinery', materials.js) in every style
     M.sage.color.setHex(st.cab);
     M.quartz.color.setHex(st.counter);
     for (const k in st.fab) M['fab' + k].color.setHex(st.fab[k]);

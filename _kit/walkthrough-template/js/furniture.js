@@ -96,8 +96,8 @@
     // --- room designs ---------------------------------------------------------------
     /* Every room has its own design: a calm palette (no bright colours), a furniture wood, a
        stone for table tops, a painted finish for its wardrobes, and its own sofa, chair and bed
-       shapes, modelled in Blender. Doors and windows share one colour ('joinery', set by the
-       style); no furniture uses it. The style still changes the architecture, lights, frames,
+       shapes, modelled in Blender. Doors and windows share one finish ('joinery', the architect's oak
+       veneer, the same in every style); no furniture uses it. The style still changes the architecture, lights, frames,
        accessories, and the living rooms' sofa shape. */
     const DESIGN = {
       gHall: { title: 'Oat linen and cognac', sofa: STYLE === 'modern' ? 'tux' : 'track', chair: 'lounge', chairFab: 'leather',
@@ -117,7 +117,8 @@
       terrace: { title: 'Stone and charcoal, outdoors', sofa: 'track',
         main: 0xcbc6bc, second: 0x5b5d60, accent: 0xa79a86, wood: 'honey', top: 'travertine', lacquer: 0xcbc6bc, rug: ['#d9d4ca', '#5b5d60', '#a79a86'] },
     };
-    // curtains: a deeper colour from each room's own palette, so they stand out against the pale walls
+    // curtains: the architect's fabric (print 'tex-curtain') everywhere; without the print, a deeper colour
+    // from each room's own palette, so they stand out against the pale walls
     const CURTAIN = { gHall: 0x7a5641, fLiving: 0x46474a, fLounge: 0x3e4752, fMaster: 0x6f6256, gMaster: 0x5e5249, gGuest: 0x4e5257, gKids: 0x6f7d6c, terrace: 0x5b5d60 };
     const curtainDefault = () => A._curtainDefault || (A._curtainDefault = (() => { const f = M.fabIvory.clone(); f.color.setHex(0x7a6c5e); return f; })());
     // materials are made once per room and kept when the style changes
@@ -232,6 +233,56 @@
       if (has('candles')) { const c = A.model('candles', { holder: M.brass, wax: M.white }); c.position.set(-0.5, 2.5, 0); g.add(c); }
       if (has('bowl')) { const b = A.model('bowl', { ceramic: M.ceramic }); b.position.set(0.55, 2.5, 0); g.add(b); }
       return g;
+    }
+    // a print made in Blender (blender/make_wallpaper.py) as a material: a carpet with a soft woven feel
+    function printMat(name) {
+      const P2 = window.WALLPAPERS && window.WALLPAPERS[name];
+      if (!P2) return null;
+      const cache2 = A._prints || (A._prints = {});
+      if (cache2[name]) return cache2[name];
+      const tx = new T.TextureLoader().load(P2.src);
+      tx.colorSpace = T.SRGBColorSpace;
+      tx.anisotropy = 8;
+      const m = new T.MeshStandardMaterial({ map: tx, roughness: 1, normalMap: M.fabIvory.normalMap, normalScale: new T.Vector2(0.35, 0.35) });
+      m.userData.aspect = P2.w / P2.h;
+      return (cache2[name] = m);
+    }
+    /* A panel in one of the architect's prints (made in Blender), solid: the print on its face and wrapped round
+       its edges and top, so its thickness shows the same material. On a wall running along ax, from a0 to a1
+       along it, standing on the wall face at 'wall' and coming out toward dir (+1 or -1) by 'thick', z0 to z1
+       high. fit 'height': the design's height fills the panel and a centred slice of its width shows; a
+       number: the print already repeats seamlessly and tiles, that many feet across one repeat. False if no print. */
+    function printPanel(name, ax, a0, a1, wall, dir, thick, z0, z1, fit) {
+      const P2 = window.WALLPAPERS && window.WALLPAPERS[name];
+      if (!P2) return false;
+      const cache2 = A._prints || (A._prints = {}), key = 'panel:' + name;
+      let mat = cache2[key];
+      if (!mat) {
+        const tx = new T.TextureLoader().load(P2.src);
+        tx.colorSpace = T.SRGBColorSpace;
+        tx.anisotropy = 8;
+        tx.wrapS = tx.wrapT = T.RepeatWrapping;
+        mat = cache2[key] = new T.MeshStandardMaterial({ map: tx, roughness: 0.7 });
+      }
+      const w = a1 - a0, h = z1 - z0, d = thick, asp = P2.w / P2.h;
+      // texture coordinates on the face, per foot along (du) and up (dv)
+      const fr = fit === 'height' ? Math.min(1, w / (h * asp)) : 0;
+      const du = fit === 'height' ? fr / w : 1 / fit, dv = fit === 'height' ? 1 / h : asp / fit, u0 = fit === 'height' ? 0.5 - fr / 2 : 0;
+      const bg = new T.BoxGeometry(w, h, d), p = bg.attributes.position, n = bg.attributes.normal, uv = bg.attributes.uv;
+      for (let i = 0; i < p.count; i++) {
+        const x = p.getX(i) + w / 2, y = p.getY(i) + h / 2, back = d / 2 - p.getZ(i); // back: depth in from the face
+        let u = u0 + x * du, v = y * dv;
+        if (Math.abs(n.getX(i)) > 0.5) u += (n.getX(i) > 0 ? back : -back) * du; // the ends: the print runs on round the edge
+        else if (Math.abs(n.getY(i)) > 0.5) v += (n.getY(i) > 0 ? back : -back) * dv; // top and bottom
+        uv.setXY(i, u, v);
+      }
+      const m = new T.Mesh(bg, mat);
+      if (ax === 'x') { m.rotation.y = dir > 0 ? 0 : Math.PI; m.position.set((a0 + a1) / 2, (z0 + z1) / 2, wall + (dir * d) / 2); }
+      else { m.rotation.y = dir > 0 ? Math.PI / 2 : -Math.PI / 2; m.position.set(wall + (dir * d) / 2, (z0 + z1) / 2, (a0 + a1) / 2); }
+      m.castShadow = true;
+      m.receiveShadow = true;
+      root.add(m);
+      return true;
     }
     function decorOn(x, y, z, R, kind) { // a small still life on a table or sideboard top
       const g = new T.Group();
@@ -678,12 +729,16 @@
     // ===== Living and dining (open to the lounge) ==============================
     // design: ivory boucle and charcoal, oak, white marble
     const RL = room('fLiving');
-    // TV wall between the rear window (ends 6'-0¾") and the glazed door
-    pb('fluted', 6.15, 0.375, 9.36, 0.45, 0, H);
-    pb(RL.woodKey, 6.25, 0.45, 9.3, 1.75, 0.55, 1.6);
-    pb('black', 6.45, 0.6, 9.1, 1.6, 0.25, 0.55);
-    pb('screen', 6.33, 0.45, 9.18, 0.57, 3.0, 4.6);
-    block(6.15, 0.4, 9.36, 1.75);
+    // TV wall between the rear window (ends 6'-0¾") and the glazed door: a panel 2" thick, up to 8 ft, faced with
+    // the architect's print ('tv-panel', made in Blender) when it is there, fluted otherwise. The design's height
+    // fills the panel and a slice of its width shows, so its shapes keep a true size. The TV and console stand
+    // off the panel's face (PF).
+    const PF = 0.375 + 2 / 12;
+    printPanel('tv-panel', 'x', 6.15, 9.36, 0.375, 1, PF - 0.375, 0, 8, 'height') || pb('fluted', 6.15, 0.375, 9.36, PF, 0, 8);
+    pb(RL.woodKey, 6.25, PF, 9.3, PF + 1.3, 0.55, 1.6);
+    pb('black', 6.45, PF + 0.15, 9.1, PF + 1.15, 0.25, 0.55);
+    pb('screen', 6.33, PF, 9.18, PF + 0.12, 3.0, 4.6);
+    block(6.15, 0.4, 9.36, PF + 1.3);
     put(sofaR(6, RL), 7.0, 8.6, 180);
     put(armchair(RL), 2.2, 5.1, 70);
     put(roundTable(1.35, 1.25, RL.top, RL.wood), 7.0, 5.1, 0);
@@ -767,7 +822,7 @@
     put(plant(3.2, M.potWhite), 0.95, 15.25, 0);
     artAt(M.art3, 'y', 15.3, 17.5, 0.375, 1, 3.8, 6.4);
     put(plant(4.4, M.pot, true), 12.2, 15.9, 0);
-    artAt(M.art4, 'x', 12.97, 14.07, 27.875, -1, 3.5, 6.3); // narrow frame between the bedroom door and the widened window
+    artN++; // bedroom-east, gallery side: no painting (the architect's call); the count stays so the other paintings keep their pictures
 
     // chandelier dropping into the void
     {
@@ -789,11 +844,17 @@
     pendant(21.4, 30.75, 4.9, 0.3, null);
     pendant(21.4, 39.05, 4.9, 0.3, null);
     rugAt(RM.rug, 17.0, 34.9, 9.2, 8.6);
-    pb('fluted', 9.25, 31.3, 9.31, 38.5, 0, H);
-    pb(RM.woodKey, 9.31, 32.0, 10.55, 37.8, 0.55, 1.7);
-    pb('black', 9.45, 32.2, 10.4, 37.6, 0.25, 0.55);
-    pb('screen', 9.31, 32.9, 9.43, 36.9, 2.9, 5.2);
-    block(9.25, 32.0, 10.55, 37.8);
+    // TV wall: a panel 2" thick up to 7 ft, all in the architect's hexagon wood ('tex-hexwood', made in
+    // Blender, tiling 6 ft across a repeat, about 9" a hexagon), fluted to the ceiling without the print;
+    // the TV and console stand off the panel's face (MF). It runs 31'-7" to 38'-2", centred on the bed: the
+    // bedroom door opens flat against this wall up to 31'-6", and its edge would otherwise meet the panel
+    const MF = 9.25 + 2 / 12, HEX = !!(window.WALLPAPERS && window.WALLPAPERS['tex-hexwood']), P0 = HEX ? 31.6 : 31.3, P1 = HEX ? 38.2 : 38.5;
+    printPanel('tex-hexwood', 'y', P0, P1, 9.25, 1, MF - 9.25, 0, 7, 6) || pb('fluted', 9.25, P0, 9.31, P1, 0, H);
+    const MC = HEX ? MF : 9.31;
+    pb(RM.woodKey, MC, 32.0, MC + 1.24, 37.8, 0.55, 1.7);
+    pb('black', MC + 0.14, 32.2, MC + 1.09, 37.6, 0.25, 0.55);
+    pb('screen', MC, 32.9, MC + 0.12, 36.9, 2.9, 5.2);
+    block(9.25, 32.0, MC + 1.24, 37.8);
     put(armchair(RM), 11.3, 43.7, 35);
     put(roundTable(0.65, 1.6, RM.top, RM.metal), 13.6, 44.9, 0);
     put(floorLamp(), 9.95, 45.5, 0, 0, false);
@@ -859,8 +920,7 @@
       root.add(s);
     }
     put(plant(3.4, M.potWhite), 8.3, 38.2, 0);
-    put(roundTable(1.5, 2.4, RT.wood, RT.wood), 4.2, 42.3, 0); // outdoor dining under the pergola
-    for (let i = 0; i < 4; i++) { const a = (i * Math.PI) / 2 + 0.6; put(chairR(RT, RT.main), 4.2 + Math.sin(a) * 2.35, 42.3 + Math.cos(a) * 2.35, (a * 180) / Math.PI + 180); }
+    // the pergola stays open: no dining table or chairs (the architect's call)
     put(plant(4.0, M.pot, true), 8.15, 45.2, 0);
     put(plant(3.6, M.pot, true), 6.4, 49.5, 0);        // clear of the balcony parapets
     put(plant(3.0, M.potWhite), 16.9, 49.6, 0);
@@ -914,6 +974,35 @@
       for (const r of list) if (!r.area && x > r.r[0] && x < r.r[2] && y > r.r[1] && y < r.r[3]) return r.name;
       return '';
     }
+    // a printed fabric keeps one true size on every drape: the drape (1 ft square, stretched to the panel) gets
+    // its own texture coordinates in feet, s feet to a repeat, so a wide or tall panel is not a stretched picture
+    function fabricUV(g, w, h, s) {
+      g.traverse((o) => {
+        if (!o.isMesh) return;
+        const geo = o.geometry.clone(), p = geo.attributes.position, uv = geo.attributes.uv;
+        for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) * w) / s, (p.getY(i) * h) / s);
+        o.geometry = geo;
+      });
+    }
+    /* How far the furniture under some drapes comes out from the wall face (feet): rays toward the wall, across
+       each drape's stretch [u0, u1] and from z0 to z1 above this floor, against the pieces placed so far. */
+    function standOff(spans, face, side, z0, z1, ax, lvl) {
+      const rc = new T.Raycaster(), meshes = [];
+      root.updateMatrixWorld(true);
+      root.traverse((o) => { if (o.isMesh) meshes.push(o); });
+      let far = 0;
+      for (const [u0, u1] of spans) {
+        if (u1 - u0 < 0.4) continue;
+        for (let i = 0; i <= 4; i++) for (let k = 0; k <= 3; k++) {
+          const u = u0 + ((u1 - u0) * i) / 4, z = lvl + z0 + ((z1 - z0) * k) / 3;
+          rc.set(ax === 'x' ? new T.Vector3(u, z, face + side * 3) : new T.Vector3(face + side * 3, z, u), ax === 'x' ? new T.Vector3(0, 0, -side) : new T.Vector3(-side, 0, 0));
+          rc.far = 3;
+          const hit = rc.intersectObjects(meshes, false)[0];
+          if (hit) far = Math.max(far, 3 - hit.distance);
+        }
+      }
+      return far;
+    }
     function curtainsFor(walls, floors, lvl, ceil, ground) {
       if (!has('drape') || !has('rod') || !has('finial') || !has('bracket')) return 0;
       const inside = (x, y) => floors.find((f) => x > f[0] && x < f[2] && y > f[1] && y < f[3]);
@@ -946,13 +1035,14 @@
         }
         for (const gp of groups) {
           const { a, b, side, f, pr, ca, cb } = gp, uc = (a + b) / 2;
-          const rk = roomAt(pr[0], pr[1], ground), mat = rk && DESIGN[rk] ? room(rk).curtain : curtainDefault();
+          const rk = roomAt(pr[0], pr[1], ground), mat = M.curtainFab.map ? M.curtainFab : rk && DESIGN[rk] ? room(rk).curtain : curtainDefault();
           const lo = (ax === 'x' ? f[0] : f[1]) + 0.08, hi = (ax === 'x' ? f[2] : f[3]) - 0.08; // stay inside the room
           const pw = Math.min(1.8, Math.max(1.0, 0.18 * (b - a) + 0.8));
           const l0 = Math.max(lo, a - 0.65 * pw), r1 = Math.min(hi, b + 0.65 * pw);
           const rodZ = Math.min(gp.head + 0.4, ceil - 0.2);
           // a corner window keeps its corner clear: no drape and no finial there, the two rods meet
-          const D = 0.27, rl = ca ? lo - 0.08 + D : Math.max(lo, l0 - 0.2), rr = cb ? hi + 0.08 - D : Math.min(hi, r1 + 0.2);
+          let D = 0.27; // the rod's stand-off from the wall face
+          const rl = ca ? lo - 0.08 + D : Math.max(lo, l0 - 0.2), rr = cb ? hi + 0.08 - D : Math.min(hi, r1 + 0.2);
           // furniture standing where a drape would hang (a bed head, a sofa, a desk): the drape moves to
           // the nearest free stretch on its own side of the opening, rather than vanish
           const hits = [], dz0 = side > 0 ? t1 : t0 - 0.5, dz1 = side > 0 ? t1 + 0.5 : t0;
@@ -982,13 +1072,17 @@
           let bottom = gp.low || gp.sill < 3.3 ? 0.05 : gp.sill - 0.15, panels = place(bottom);
           // no room for both floor-length drapes (furniture against the wall): hang both to the sill instead
           if (!whole(panels) && !gp.low && gp.sill > 1.5 && bottom < 1) { bottom = gp.sill - 0.05; panels = place(bottom); }
-          // still no room (bed heads either side of a window): end the drapes just above the tallest piece below them
-          if (!whole(panels) && !gp.low) {
-            const tops = hits.filter((h) => h[1] > l0 && h[0] < r1 && isFinite(h[2])).map((h) => h[2]);
-            const over = tops.length ? Math.max(...tops) + 0.1 : null;
-            if (over !== null && over > bottom && over < gp.head - 2) { const ps = place(over); if (whole(ps)) { bottom = over; panels = ps; } }
+          // still no room (bed heads either side of a window): the drapes still hang to the sill, in front of the
+          // pieces in the way, the rod standing off the wall far enough for them to clear (measured on the pieces)
+          if (!whole(panels) && !gp.low && gp.sill > 1.5) {
+            const ps = place(Infinity), tops = hits.filter((h) => h[1] > l0 && h[0] < r1 && isFinite(h[2])).map((h) => h[2]);
+            if (whole(ps) && tops.length) {
+              bottom = gp.sill - 0.05;
+              panels = ps;
+              D = Math.max(D, standOff(ps, side > 0 ? t1 : t0, side, bottom + 0.05, Math.min(Math.max(...tops), gp.head), ax, lvl) + 0.15);
+            }
           }
-          (A.curtainList = A.curtainList || []).push([w.id, gp.n, panels.filter((p) => p[1] - p[0] >= 0.4).length]);
+          (A.curtainList = A.curtainList || []).push([w.id, gp.n, panels.filter((p) => p[1] - p[0] >= 0.4).length, +bottom.toFixed(2), +D.toFixed(2)]);
           const sgn = ax === 'x' ? side : -side, lx = (u) => (u - uc) * sgn; // the set is built facing the room, then turned
           const g = new T.Group();
           const rod = A.model('rod', { metal: M.brass });
@@ -1004,12 +1098,14 @@
             }
             const br = A.model('bracket', { metal: M.brass });
             br.position.set(lx(u - dir * 0.22), rodZ, 0);
+            if (D > 0.27) br.scale.z = (D - 0.02) / 0.25; // a longer arm for a rod standing further off the wall
             g.add(br);
           }
           for (const [u0, u1] of panels) {
             if (u1 - u0 < 0.4) continue;
             const dp = A.model('drape', { fab: mat });
             dp.scale.set(u1 - u0, rodZ - 0.06 - bottom, 1);
+            if (mat.map) fabricUV(dp, u1 - u0, rodZ - 0.06 - bottom, (A.S && A.S.curtainFab) || 3);
             dp.position.set(lx((u0 + u1) / 2), bottom, D - 0.09);
             g.add(dp);
           }
@@ -1028,8 +1124,8 @@
       root = gf; FG = 'gfurn';
       A.furnishGround({
         T, P, M, GF, STYLE, HW, TAP, FRAME, cache, pb, block, mesh, bx, rb, soft, cyl, put, legs, sofa, roundTable, floorLamp, tableLamp, plant, chair, dining, bed, bench, wc,
-        room, sofaR, armchair, bedR, benchR, chairR, nightstand, consoleR, diningR, decorOn,
-        curtain, hang, rugAt, artAt, pendant, cabRun, wardrobeSet, add: (o) => { root.add(o); return o; },
+        room, sofaR, armchair, bedR, benchR, chairR, nightstand, consoleR, diningR, decorOn, printMat,
+        curtain, hang, rugAt, artAt, skipArt: () => { artN++; }, printPanel, pendant, cabRun, wardrobeSet, add: (o) => { root.add(o); return o; },
       });
       A.curtainCount += curtainsFor(P.ground.walls, P.ground.roomFloors, GF, P.ground.H, true); // after the furniture, so drapes clear it
       root = ff; FG = 'furn';

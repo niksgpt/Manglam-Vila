@@ -146,6 +146,46 @@
       }
     }
 
+    /* The architect's wallpaper (a print made in Blender, blender/make_wallpaper.py, for exactly this stretch)
+       on one side of a wall: side +1 = the face at the higher x or y, -1 = the lower; a0 to a1 along the wall,
+       z0 to z1 high; cut round the wall's windows and doors (their sills count from the wall's own base). The
+       skirting stands in front of it. Nothing without the print. */
+    function wallpaper(print, walls, id, side, a0, a1, z0, z1) {
+      const WPp = window.WALLPAPERS && window.WALLPAPERS[print], w = walls.find((v) => v.id === id);
+      if (!WPp || !w) return false;
+      const tx = new T.TextureLoader().load(WPp.src);
+      tx.colorSpace = T.SRGBColorSpace;
+      tx.anisotropy = 8;
+      const mat = new T.MeshStandardMaterial({ map: tx, roughness: 0.8 });
+      const face = (w.ax === 'x' ? (side > 0 ? w.r[3] : w.r[1]) : side > 0 ? w.r[2] : w.r[0]) + side * 0.005;
+      // r: which way the viewer's right runs along the wall, facing it
+      const r = w.ax === 'x' ? side : -side, rot = w.ax === 'x' ? (side > 0 ? 0 : Math.PI) : side > 0 ? Math.PI / 2 : -Math.PI / 2;
+      const L = a1 - a0, Hh = z1 - z0, base = w.base || 0;
+      // pieces: full height between openings; below the sill and above the head across each opening
+      const ops = (w.ops || []).filter((o) => o.b > a0 && o.a < a1).map((o) => [Math.max(a0, o.a), Math.min(a1, o.b), base + (o.sill || 0), base + o.head]).sort((p, q) => p[0] - q[0]);
+      const rects = [];
+      let u = a0;
+      for (const [oa, ob, os, oh] of ops) {
+        if (oa > u) rects.push([u, oa, z0, z1]);
+        if (os > z0 + 0.01) rects.push([oa, ob, z0, Math.min(os, z1)]);
+        if (oh < z1 - 0.01) rects.push([oa, ob, Math.max(oh, z0), z1]);
+        u = Math.max(u, ob);
+      }
+      if (u < a1) rects.push([u, a1, z0, z1]);
+      for (const [ua, ub, za, zb] of rects) {
+        const pw = ub - ua, ph = zb - za, uc = (ua + ub) / 2, zc = (za + zb) / 2;
+        const g = new T.PlaneGeometry(pw, ph), uv = g.attributes.uv, p = g.attributes.position;
+        for (let i = 0; i < p.count; i++) uv.setXY(i, (p.getX(i) + (r > 0 ? uc - a0 : a1 - uc)) / L, (p.getY(i) + zc - z0) / Hh);
+        const m = new T.Mesh(g, mat);
+        m.rotation.y = rot;
+        if (w.ax === 'x') m.position.set(uc, zc, face); else m.position.set(face, zc, uc);
+        m.receiveShadow = true;
+        m.userData.grp = G;
+        extra.push(m);
+      }
+      return true;
+    }
+
     // --- door leaves (fl = floor level the door stands on) --------------------
     function leaf(ax, u0, u1, v0, v1, z0, z1, glazed, fl) {
       const alongU = u1 - u0 > v1 - v0;
@@ -235,12 +275,12 @@
         }
         return;
       }
-      // doors and cased openings: a teak lining (from the opening's own sill, for one high up a tall wall)
+      // doors and cased openings: a lining in the door veneer (from the opening's own sill, for one high up a tall wall)
       fl = fl + (o.sill || 0);
       const j = 0.1;
-      lb('joinery',ax, a, a + j, t0 - 0.03, t1 + 0.03, fl, head);
-      lb('joinery',ax, b - j, b, t0 - 0.03, t1 + 0.03, fl, head);
-      lb('joinery',ax, a + j, b - j, t0 - 0.03, t1 + 0.03, head - j, head);
+      lb('joinery', ax, a, a + j, t0 - 0.03, t1 + 0.03, fl, head);
+      lb('joinery', ax, b - j, b, t0 - 0.03, t1 + 0.03, fl, head);
+      lb('joinery', ax, a + j, b - j, t0 - 0.03, t1 + 0.03, head - j, head);
       if (o.type === 'open') return;
       const glazed = o.type === 'gdoor', th = 0.07, z0 = fl + 0.03, z1 = head - j;
       if (o.leaves === 2) { // double door: one leaf hinged at each side
@@ -309,19 +349,36 @@
     /* On the outer faces of chosen walls (a face is outer when no room, and not the stair, lies
        beyond it), stopping at openings and wrapping round outer wall ends, and all round chosen
        pillars. Chosen in the plan (wall.clad) or in this home's list. */
-    const CLAD = ['g-stair-front', 'g-stair-north', 'g-stair-south', 'gp-porch-1', 'gp-porch-2', 'p-terrace-1', 'p-terrace-2'];
+    /* This home's wall finishes: wall or pillar -> material ('wpc' charcoal panels, 'plaster' textured
+       stone, 'felt' quilted felt), on the wall's outer faces; or { mk, face } for one chosen side of
+       an inside wall (face -1 = the side at the lower x / y, +1 = the higher). */
+    const CLAD = {
+      'g-stair-front': 'wpc', 'g-stair-north': 'wpc', 'g-stair-south': 'wpc', 'gp-porch-1': 'wpc', 'gp-porch-2': 'wpc', 'p-terrace-1': 'wpc', 'p-terrace-2': 'wpc',
+      'g-lobby-kitchen': 'plaster', 'g-hall-north': 'plaster', 'g-entrance': 'plaster', 'lounge-north': 'plaster', 'bedroom-north': 'plaster', 'lounge-terrace': 'plaster',
+      'g-bed-hall': { mk: 'felt', face: 1 },  // the hall side, behind the sofa
+      'g-kitchen-west': 'plaster',
+      front: { mk: 'plaster', range: [-Infinity, 19] }, // its balcony side, up to the stair tower (g-stair-north)
+      'g-north-porch': { mk: 'brick', face: 'both' }, 'g-front-pier': { mk: 'brick', face: 'both' }, 'gp-gate': 'brick',
+    };
+    const THICK = { wpc: 0.06, felt: 0.045, brick: 0.05 };  // panels and brick slips stand proud; a textured finish is thin
     function cladding(walls, pillars, interior) {
-      const T_ = 0.06, isIn = (x, y, list) => list.some((f) => x > f[0] && x < f[2] && y > f[1] && y < f[3]);
+      const isIn = (x, y, list) => list.some((f) => x > f[0] && x < f[2] && y > f[1] && y < f[3]);
       const wallRects = walls.map((w) => w.r);
       for (const w of walls) {
-        if (!(w.clad || CLAD.includes(w.id))) continue;
+        const spec = w.clad || CLAD[w.id], mk = spec && (typeof spec === 'string' ? spec : spec.mk), face = spec && spec.face;
+        if (!mk || !M[mk]) continue;
+        const T_ = THICK[mk] || 0.03;
         const ax = w.ax, [x0, y0, x1, y1] = w.r, fl = w.base || 0, z0 = w.z[0], z1 = w.z[1];
         const lo = ax === 'x' ? x0 : y0, hi = ax === 'x' ? x1 : y1, t0 = ax === 'x' ? y0 : x0, t1 = ax === 'x' ? y1 : x1, mid = (lo + hi) / 2;
         const pt = (u, t) => (ax === 'x' ? [u, t] : [t, u]);
         const outside = (u, t) => { const [px, py] = pt(u, t); return !isIn(px, py, interior) && !isIn(px, py, wallRects.filter((r) => r !== w.r)); };
-        const endA = outside(lo - 0.4, (t0 + t1) / 2), endB = outside(hi + 0.4, (t0 + t1) / 2); // bare wall ends get panels too
+        // a finish can stop partway along the wall (range, along its length)
+        const r0 = spec.range ? Math.max(lo, spec.range[0]) : lo, r1 = spec.range ? Math.min(hi, spec.range[1]) : hi;
+        // bare outer wall ends get panels too (not on a chosen side of an inside wall, nor where the finish stops short)
+        const wrapEnds = !face || face === 'both';
+        const endA = wrapEnds && r0 <= lo + 1e-6 && outside(lo - 0.4, (t0 + t1) / 2), endB = wrapEnds && r1 >= hi - 1e-6 && outside(hi + 0.4, (t0 + t1) / 2);
         const ops = w.ops || [];
-        const cuts = Array.from(new Set([lo, hi].concat(ops.flatMap((o) => [o.a, o.b])).filter((v) => v >= lo && v <= hi))).sort((p, q) => p - q);
+        const cuts = Array.from(new Set([r0, r1].concat(ops.flatMap((o) => [o.a, o.b])).filter((v) => v >= r0 && v <= r1))).sort((p, q) => p - q);
         const solidZ = (m) => { // heights of solid wall at a point along it, between its openings
           const holes = ops.filter((o) => o.a < m && o.b > m).map((o) => [fl + (o.sill || 0), fl + o.head]).sort((p, q) => p[0] - q[0]);
           const out = []; let cur = z0;
@@ -330,17 +387,20 @@
           return out;
         };
         for (const [s, t] of [[-1, t0], [1, t1]]) {
-          if (!outside(mid, t + s * 0.4)) continue;
+          if (face === 'both' ? false : face ? s !== face : !outside(mid, t + s * 0.4)) continue;
           for (let i = 0; i < cuts.length - 1; i++) {
             const a = cuts[i] - (i === 0 && endA ? T_ : 0), b = cuts[i + 1] + (i === cuts.length - 2 && endB ? T_ : 0);
-            for (const [za, zb] of solidZ((cuts[i] + cuts[i + 1]) / 2)) lb('wpc', ax, a, b, s < 0 ? t - T_ : t, s < 0 ? t : t + T_, za, zb);
+            for (const [za, zb] of solidZ((cuts[i] + cuts[i + 1]) / 2)) lb(mk, ax, a, b, s < 0 ? t - T_ : t, s < 0 ? t : t + T_, za, zb);
           }
         }
         for (const [u, end] of [[lo, endA], [hi, endB]]) if (end) { // the wall's own end face
-          for (const [za, zb] of solidZ(u === lo ? lo + 0.01 : hi - 0.01)) lb('wpc', ax, u === lo ? lo - T_ : hi, u === lo ? lo : hi + T_, t0, t1, za, zb);
+          for (const [za, zb] of solidZ(u === lo ? lo + 0.01 : hi - 0.01)) lb(mk, ax, u === lo ? lo - T_ : hi, u === lo ? lo : hi + T_, t0, t1, za, zb);
         }
       }
-      for (const p of pillars) if (p.clad || CLAD.includes(p.id)) box('wpc', p.r[0] - T_, p.r[1] - T_, p.r[2] + T_, p.r[3] + T_, p.z[0], p.z[1]);
+      for (const p of pillars) {
+        const spec = p.clad || CLAD[p.id], mk = spec && (typeof spec === 'string' ? spec : spec.mk), T_ = THICK[mk] || 0.03;
+        if (mk && M[mk]) box(mk, p.r[0] - T_, p.r[1] - T_, p.r[2] + T_, p.r[3] + T_, p.z[0], p.z[1]);
+      }
     }
 
     // --- walls ------------------------------------------------------------
@@ -382,20 +442,34 @@
     G = 'both';
     for (let i = 0; i < 7; i++) { // flight 1, heading south
       const top = -(i + 1) * RISE;
-      box('stair', 20.29 + i * TREAD, 24.375, 20.29 + (i + 1) * TREAD + 0.02, 27.875, top - TH, top);
+      box('stairMarble', 20.29 + i * TREAD, 24.375, 20.29 + (i + 1) * TREAD + 0.02, 27.875, top - TH, top);
     }
-    box('stair', 26.125, 23.96, 29.625, 27.875, -8 * RISE - TH, -8 * RISE);
+    box('stairMarble', 26.125, 23.96, 29.625, 27.875, -8 * RISE - TH, -8 * RISE);
     for (let j = 0; j < 7; j++) { // flight 2, heading east
       const top = -(9 + j) * RISE;
-      box('stair', 26.125, 23.96 - (j + 1) * TREAD - 0.02, 29.625, 23.96 - j * TREAD, top - TH, top);
+      box('stairMarble', 26.125, 23.96 - (j + 1) * TREAD - 0.02, 29.625, 23.96 - j * TREAD, top - TH, top);
     }
-    box('stair', 26.125, 14.625, 29.625, 18.125, -16 * RISE - TH, -16 * RISE);
+    box('stairMarble', 26.125, 14.625, 29.625, 18.125, -16 * RISE - TH, -16 * RISE);
     for (let k = 0; k < 3; k++) { // flight 3, heading north
       const top = -(17 + k) * RISE;
-      box('stair', 26.125 - (k + 1) * TREAD - 0.02, 14.625, 26.125 - k * TREAD, 18.125, top - TH, top);
+      box('stairMarble', 26.125 - (k + 1) * TREAD - 0.02, 14.625, 26.125 - k * TREAD, 18.125, top - TH, top);
     }
     // --- feature finishes ---------------------------------------------------
-    box('cladding', 29.56, 14.625, 29.625, 27.875, GF, H);            // tall south wall of the void
+    // tall south wall of the double height, beside the main stair: the wallpaper print made in
+    // Blender (blender/make_wallpaper.py), only over this stretch, so no other room shows it;
+    // stone cladding when there is no print. The skirting stands in front of it.
+    const WP = window.WALLPAPERS && window.WALLPAPERS['void-south'];
+    if (WP) {
+      const tx = new T.TextureLoader().load(WP.src);
+      tx.colorSpace = T.SRGBColorSpace;
+      tx.anisotropy = 8;
+      const wp = new T.Mesh(new T.PlaneGeometry(27.875 - 14.625, H - GF), new T.MeshStandardMaterial({ map: tx, roughness: 0.78 }));
+      wp.rotation.y = -Math.PI / 2;                     // facing the stair and the double height
+      wp.position.set(29.62, (GF + H) / 2, (14.625 + 27.875) / 2);
+      wp.receiveShadow = true;
+      wp.userData.grp = 'both';
+      extra.push(wp);
+    } else box('cladding', 29.56, 14.625, 29.625, 27.875, GF, H);
     G = 'main';
 
     if (!GR) {
@@ -410,11 +484,15 @@
       const PL = GF + GR.PORCH;
       buildWalls(GR.walls, GR.floors.concat([[19, 47, 29.625, 52.75, 'stonefloor', GF]]));
       cladding(GR.walls, GR.pillars, GR.roomFloors.concat([[19, 47, 29.625, 52.75]]));
+      // the architect's wallpapers behind the beds, floor to ceiling across each room only (see wallpaper())
+      wallpaper('guest-bed', GR.walls, 'g-south', -1, 0.75, 14.25, GF, -SLAB - 0.03);     // guest room
+      wallpaper('kids-bed', GR.walls, 'g-north-rear', 1, 4.75, 14.25, GF, -SLAB - 0.03);  // children's room
       // the home's name plate, modelled in Blender, on the road face of the gate pier at eye level
       const pier = GR.walls.find((w) => w.id === 'g-front-pier');
       if (pier && HAS('nameplate')) {
         const base = Math.min(pier.z[1] - 1.4, GF + GR.PORCH + 4.3);
-        piece('nameplate', { plate: 'plaque', letters: 'gilt' }, (pier.r[0] + pier.r[2]) / 2, pier.r[3], base, 0, 1, 1, 1);
+        const pc = pier.clad || CLAD[pier.id], pmk = pc && (typeof pc === 'string' ? pc : pc.mk), proud = pmk ? THICK[pmk] || 0.03 : 0; // on the cladding's face
+        piece('nameplate', { plate: 'plaque', letters: 'gilt' }, (pier.r[0] + pier.r[2]) / 2, pier.r[3] + proud, base, 0, 1, 1, 1);
       }
       for (const p of GR.pillars) box(p.mat, p.r[0], p.r[1], p.r[2], p.r[3], p.z[0] === GF ? GF - 0.02 : p.z[0], p.z[1]);
       for (const r of GR.indoor) { box('stone', r[0], r[1], r[2], r[3], PL - 0.6, GF - 0.035); box('marble', r[0], r[1], r[2], r[3], GF - 0.035, GF - 0.02); }
@@ -441,7 +519,7 @@
       for (let k = 0; k < 3; k++) box('stair', X1, wy[k], 29.625, wy[k + 1] + (k < 2 ? 0.02 : 0), (7 + k) * RT - TH, (7 + k) * RT);
       for (let k = 1; k <= 6; k++) box('stair', X1 - k * TF - 0.02, 50.01, X1 - (k - 1) * TF, 52.75, (9 + k) * RT - TH, (9 + k) * RT);
       box('stone', 19.375, 47, X0, 52.75, TOPL - SLAB, TOPL - 0.02);           // landing on the roof
-      box('stonefloor', 19.375, 47, X0, 52.75, TOPL - 0.02, TOPL);
+      box('terrazzo', 19.375, 47, X0, 52.75, TOPL - 0.02, TOPL);               // roof landing: the roof's terrazzo
       // the inner side of the flights, round the gap between them: a railing, not a wall
       const yA = 49.76 - 0.07, yB = 50.01 + 0.07;
       for (const [base, R] of [[GF, RF], [0, RT]]) {
@@ -466,7 +544,7 @@
       if (!above('g-stair-north')) glassRun([19.45, 52.66, TOPL], [19.45, 47.05, TOPL], 0, 'both'); //   north side
       glassRun([X0 + R0, 47.05, TOPL], [X0 + R0, 49.76, TOPL], 0, 'both');     //   over the flight below
       // roof finish: terrace tiles on top of the roof slab
-      for (const c of P.ceilings) box('stonefloor', c[0], c[1], c[2], c[3], TOPL, TOPL + 0.02, 'ceil'); // incl. the roof over the front balcony
+      for (const c of P.ceilings) box('terrazzo', c[0], c[1], c[2], c[3], TOPL, TOPL + 0.02, 'ceil'); // terrazzo roof floor, incl. the roof over the front balcony
       // parapet round the roof (part of the roof, so the dollhouse view lifts it off too)
       for (const s of (A.frontStair || {}).parapet || []) {
         const t = 0.375, a = s.c - (s.n > 0 ? t : 0), b = s.c + (s.n < 0 ? t : 0);

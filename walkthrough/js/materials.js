@@ -337,9 +337,8 @@
     M.teakV = std({ map: tTeakV, roughness: 0.55 }); S.teakV = 3;
     M.walnut = std({ map: tWalnut, roughness: 0.5 }); S.walnut = 3;
     // Doors and window frames: one material, coloured by the style (styles.js). No furniture uses it.
-    M.joinery = std({ map: tWalnut, roughness: 0.45 }); S.joinery = 3;
     // Furniture woods and stones: the same in every style, and never the colour of the doors.
-    M.oak = std({ map: tex(512, (g, s, R) => wood(g, s, R, 34, 32, 60, 512, 0, 3), 25), roughness: 0.5 }); S.oak = 3;
+    M.oak = std({ map: tex(512, (g, s, R) => wood(g, s, R, 36, 10, 60, 512, 0, 3), 25), roughness: 0.5 }); S.oak = 3; // grey-washed oak, well apart from the golden door veneer
     M.ash = std({ map: tex(512, (g, s, R) => wood(g, s, R, 40, 20, 74, 512, 0, 3), 26), roughness: 0.5 }); S.ash = 3;
     M.honey = std({ map: tex(512, (g, s, R) => wood(g, s, R, 30, 46, 46, 512, 0, 3), 27), roughness: 0.46 }); S.honey = 3;
     M.travertine = std({ map: tex(512, (g, s, R) => marble(g, s, R, '#dacfbb', '170,150,122', 1, 3), 28), roughness: 0.55 }); S.travertine = 3;
@@ -355,6 +354,31 @@
       for (let k = 0; k < 220; k++) { g.fillStyle = R() < 0.5 ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.05)'; g.fillRect(R() * s, R() * s, 1, 6 + R() * 30); }
     }, 35);
     M.wpc = std({ map: tWpc, roughness: 0.62 }); S.wpc = 1.5;
+    /* Wall finishes from the architect's own textures (prints made in Blender, js/wallpaper-data.js):
+       repeating at a true size, mirrored at alternate repeats so no seam shows; a plain colour
+       stands in when the print is missing. */
+    const printFinish = (key, print, feet, rough, fallback, tiles) => { // tiles: the print already repeats seamlessly (brick bond)
+      const PT = window.WALLPAPERS && window.WALLPAPERS[print];
+      if (PT) {
+        const t = new T.TextureLoader().load(PT.src);
+        t.colorSpace = T.SRGBColorSpace;
+        t.wrapS = t.wrapT = tiles ? T.RepeatWrapping : T.MirroredRepeatWrapping;
+        t.anisotropy = 8;
+        M[key] = std({ map: t, roughness: rough });
+      } else M[key] = std({ color: fallback, roughness: rough });
+      S[key] = feet;
+    };
+    printFinish('plaster', 'tex-plaster', 2.5, 0.92, 0xd8ccba); // textured beige stone, outer walls
+    printFinish('felt', 'tex-felt', 3.0, 1.0, 0xb0727a);         // quilted rose felt panels
+    printFinish('terrazzo', 'tex-terrazzo', 2.5, 0.35, 0xe6ebea); // terrazzo, the roof floor
+    printFinish('brick', 'tex-brick', 2.75, 0.9, 0xcfc5b6, true); // beige brick slips, porch wall, gate pier and pillar
+    printFinish('stairMarble', 'tex-statuario', 4.0, 0.15, 0xf4f4f2); // white statuario, every face of the main stair
+    M.stairMarble.envMapIntensity = 0.5;
+    // doors and windows (leaves, frames, linings, window frames): the architect's oak veneer, the same in every
+    // style; the grain runs up, 5 ft across a repeat and one repeat per storey height, so no door shows a joint across it
+    printFinish('joinery', 'tex-veneer', 5.0, 0.48, 0xb98a5c);
+    if (M.joinery.map) M.joinery.map.repeat.set(1, 5 / ((A.plan && -A.plan.GF) || 11.42));
+    printFinish('curtainFab', 'tex-curtain', 3.0, 0.95, 0xd9d3cb); // the architect's curtain fabric, every curtain in the house
     // the gate pier's name plate: polished dark stone, brass lettering (the same in every style)
     M.plaque = std({ color: 0x23201d, roughness: 0.22, metalness: 0.1, envMapIntensity: 0.9 });
     M.gilt = std({ color: 0xc9a45c, roughness: 0.28, metalness: 1.0 });

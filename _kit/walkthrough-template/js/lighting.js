@@ -222,7 +222,7 @@
 
     // --- time of day --------------------------------------------------------------
     const base = {}; // how much sky each shiny finish mirrors at the afternoon setting
-    for (const k of ['marble', 'stair', 'bathwall', 'woodfloor', 'bathfloor', 'ceramic', 'quartz', 'glass', 'railglass', 'screen', 'car']) if (M[k]) base[k] = M[k].envMapIntensity;
+    for (const k of ['marble', 'stair', 'stairMarble', 'bathwall', 'woodfloor', 'bathfloor', 'ceramic', 'quartz', 'glass', 'railglass', 'screen', 'car']) if (M[k]) base[k] = M[k].envMapIntensity;
     M.woodfloor.roughness = 0.42; // a little sheen, so lamps and windows glint on timber floors too
     M.bathfloor.roughness = 0.36;
     M.nbwin.emissive.setRGB(1, 0.76, 0.48);

@@ -43,7 +43,9 @@
     put(K.armchair(RH), 8.0, 20.6, -90);
     put(K.roundTable(1.35, 1.25, RH.top, RH.wood), 4.8, 20.5, 0);
     if (STYLE !== 'luxury') K.decorOn(4.8, 20.3, GF + 1.25, RH, 'pair');
-    K.rugAt(RH.rug, 4.8, 19.9, 8.4, 7.4, GF);
+    // the carpet under the seating: the architect's own carpet design (a print made in Blender),
+    // 8'-5" across the sofa and as deep as the design's proportions allow; the room's rug without it
+    { const cp = K.printMat('rug-hall'); if (cp) K.rugAt(cp, 4.8, 19.9, 8.4, 8.4 / cp.userData.aspect, GF); else K.rugAt(RH.rug, 4.8, 19.9, 8.4, 7.4, GF); }
     put(K.floorLamp(), 0.95, 15.35, 0, false);
     put(K.plant(3.4, M.potWhite), 1.05, 26.3, 0);           // clear of the entrance curtains
     art(M.art1, 'x', 2.9, 6.5, 14.625, 1, 4.3, 6.9);
@@ -103,8 +105,7 @@
     put(K.chairR(RK, RK.main), 8.15, 7.25, 180);
     K.decorOn(7.6, 5.4, GF + 2.5, RK, 'books');            // books on the desk
     K.rugAt(RK.rug, 9.3, 10.6, 4.6, 6.2, GF);
-    art(M.art2, 'y', 5.4, 7.2, -0.25, 1, 4.6, 6.3);
-    art(M.art4, 'y', 11.6, 13.4, -0.25, 1, 4.6, 6.3);
+    K.skipArt(); K.skipArt(); // the wall behind the beds carries the wallpaper, no paintings (the count stays, so the others keep their pictures)
     pendant(8.6, 10.2, 7.4, 0.5, M.brass);
 
     // ===== Pooja: marble mandir on the rear wall ================================
@@ -162,7 +163,7 @@
     pendant(28.8, 11.0, 4.9, 0.3, null);
     K.rugAt(RG.rug, 24.4, 6.5, 8.2, 8.4, GF);
     art(M.art4, 'y', 3.6, 6.6, 19.625, 1, 3.9, 6.3);
-    art(M.art2, 'y', 4.9, 8.1, 29.625, -1, 5.7, 7.5);
+    // the wall behind the bed (g-south) carries the wallpaper, no painting (shell.js)
     put(K.plant(3.4, M.pot), 20.5, 1.6, 0);
 
     // ===== Passage ================================================================
@@ -196,11 +197,15 @@
     pendant(28.4, 34.55, 4.9, 0.3, null);
     pendant(28.4, 43.25, 4.9, 0.3, null);
     K.rugAt(RB.rug, 23.4, 38.9, 9.4, 8.6, GF);
-    g('fluted', 16.25, 36.7, 16.31, 40.5, 0, HG);            // TV wall
-    g(RB.woodKey, 16.31, 36.9, 17.5, 40.3, 0.55, 1.7);
-    g('black', 16.45, 37.1, 17.35, 40.1, 0.25, 0.55);
-    g('screen', 16.31, 37.2, 16.43, 40.0, 2.9, 4.9);
-    block(16.25, 36.9, 17.5, 40.3);
+    // TV wall: a panel 2" thick up to 8 ft, all in the architect's watercolour stone ('tv-ground-master', made in
+    // Blender; the design's height fills the panel and a slice of its width shows), fluted to the ceiling
+    // without the print; the TV and console stand off the panel's face (GM)
+    const GMP = K.printPanel('tv-ground-master', 'y', 36.7, 40.5, 16.25, 1, 2 / 12, GF, GF + 8, 'height'), GM = GMP ? 16.25 + 2 / 12 : 16.31;
+    if (!GMP) g('fluted', 16.25, 36.7, 16.31, 40.5, 0, HG);
+    g(RB.woodKey, GM, 36.9, GM + 1.19, 40.3, 0.55, 1.7);
+    g('black', GM + 0.14, 37.1, GM + 1.04, 40.1, 0.25, 0.55);
+    g('screen', GM, 37.2, GM + 0.12, 40.0, 2.9, 4.9);
+    block(16.25, 36.9, GM + 1.19, 40.3);
     put(K.armchair(RB), 20.9, 44.55, 180);
     put(K.floorLamp(), 19.6, 45.6, 0, false);
     art(M.art3, 'y', 37.3, 40.5, 29.25, -1, 5.7, 7.5);

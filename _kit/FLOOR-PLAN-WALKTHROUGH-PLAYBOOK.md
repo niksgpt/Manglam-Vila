@@ -153,6 +153,13 @@ There is no Blender connector in the Claude connector directory, so Claude Code 
   - interior pieces: track-arm and tuxedo sofas (3-seat, 2-seat, armchair), an armless lounge chair, four beds (channel-tufted, wingback, panel, arched single), an upholstered dining chair, a racetrack dining table on turned pedestals, round and rectangular coffee tables, a side table, a nightstand, a reeded sideboard, a bed bench, and decor (two vases, a bowl, a book stack, candles). Split by role (body, cushion, leg, head, base, top, front, pull...) so each room paints them in its own palette.
   - the name plate: `make_furniture.py -- <out models-data.js> "<Home name>"` sets the lettering.
   - curtains: a pleated drape (stretched to each panel and drop), a rod, a ball finial and a wall bracket.
+- `walkthrough/blender/make_wallpaper.py` turns a wallpaper image into a print for one wall, written to `js/wallpaper-data.js` (built into the single file):
+
+  ```
+  blender.exe --background --factory-startup --python walkthrough\blender\make_wallpaper.py -- <image> walkthrough\js\wallpaper-data.js <name> <wall width / height> [rotate|repeat]
+  ```
+
+  `rotate` turns a landscape design upright and trims it equally to the wall's proportions (one print, nothing stretched); `repeat` runs it across the wall and repeats it down, every other repeat mirrored so no seam shows. Use full paths: Blender does not see paths relative to the shell. For Manglam Vila the source is `walkthrough/blender/wallpaper/void-south.jpg`, hung on the double-height south wall beside the main stair (`void-south`, ratio 0.5911, rotate), in place of the stone cladding there. The same script makes carpets: `rug-hall.jpg` (`rug-hall`, the image's own ratio 1.3953, repeat = one print) is the carpet under the ground-floor hall sofa, 8'-5" across and as deep as its proportions allow (`printMat` in `furniture.js`). Each run keeps the other prints in the file and replaces only its own.
   - fittings: railing parts (a chamfered post, a pyramid post cap, a round baluster bar, a handrail with a rounded top) and a 4" skirting with a rounded top edge. Each is one foot long (or high); the walkthrough stretches it along each railing run and each wall (`piece()` in `shell.js`), so a few dozen triangles serve the whole house.
 - **Styles:** each model is split by role (fabric, piping, pot, leaf, shade...), and the walkthrough paints each role with the current style's material, so the same models serve all three styles.
 - **Loading:** `js/models.js` loads the models. `furniture.js` uses them through `soft()`, `bedding()`, `plant()` and the lamp functions, and falls back to plain shapes if `models-data.js` is missing.
@@ -388,6 +395,85 @@ Notes on 49–50:
 53. `use Charcoal Grey wpc panels for outer wall of g-stair-front,g-stair-north,g-stair-south and pillars gp-porch-2 and gp-porch-1`
 54. `also there is edit in editor`
 55. `p-terrace-1, p-terrace-2 do the same above wpc panel for these pillars there is edit in editor`
+56. Pasted the Blender connector's log (blocked by Smart App Control again on 25 Nov); reply to "How should I handle the Blender connector?": `Keep command line`
+57. With a wallpaper image: `using blender, use this wallpaper on the inside side of south wall which is touched to main stair dont extend this wall paper to other rooms should only be visible from double height area`
+58. `you can rotate the image`
+59. `smart app control is off`
+60. Reply to "Push the wallpaper changes to the GitHub branch?": `Not now`
+61. With a carpet image: `use this as carpet under the sofa in living/ dining hall`
+62. With a texture image: `outer side of g-lobby-kitchen,g-hall-north,g-entrance,lounge-north,bedroom-north,lounge-terrace`
+
+63. With a quilted felt texture: `g-bed-hall`; reply to "Which side of wall g-bed-hall should get the pink quilted felt finish?": `Hall side`
+
+64. `on g-kitchen-west, front wall till g-stair-north north wall i.e., in balcony` (more walls for the textured stone of 62)
+
+65. With an onyx marble image: `use this for ground floor's floor except for toilets and bathrooms`
+66. With a terrazzo image, sent while the onyx was being built: `use this for roof floor` (an image sent mid-task is not saved as a file; it has to be sent again as its own message)
+
+67. `undo the marble we added`
+68. With a terrazzo image (teal and white chips; this one, not the green one in 66): `this is for roof floor`
+
+69. With a brick image: `g-north-porch,g-front-pier,gp-gate both side`
+
+70. With a white statuario marble image: `for main stair all sides`
+
+71. With a green and beige geometric wallpaper image, sent while the stair was being built: `wall behind the bed of guest room` / `remove the painting from this wall` / `also remove 4chairs and the round table from the terrave`
+
+72. The same wallpaper image again, as its own message: `for guest room`
+
+73. With an oak veneer image: `use this for doors`; replies to "Should the window frames get the veneer too?": `Windows too`, and to "What should the oak furniture become?": `Grey-washed oak (Recommended)`
+
+74. With a pastel geometric print, sent while the doors were being built: `use this for tv panel on rear-thin wall` / `make the panel top height to 8'`
+
+75. The same pastel print again, as its own message: `for tv panel on rear-thin wall`
+
+76. `remove the painting on bedroom-east, gallery side`
+
+77. With a pale grey-beige fabric image: `use this for curtains`
+
+78. Reply quoting `for tv panel on rear-thin wall`, sent while the curtains were being built: `thickness of panel is 2 inches`
+
+79. With a hexagon wood image: `use this for tv panel in master bedroom with thickness of panel 2inches and top height  7'`; reply to "Which master bedroom?": `First floor master`
+
+80. With a blue and gold watercolour stone image: `use this for tv panel in ground floor master bedroom` / `panel is 2 inch thick and top height 8'`; then, while it was being built: `thickness should be of this material` / `not the black`
+
+81. With a sage and grey geometric wallpaper image: `use this for wall behind the bed of children's room` / `remove the paintings on that wall` / `adjust the height of curtain too` / `then push it to git`; reply to "How should the curtain height change?": `Hem down to the sill`; then, while it was being built: `and then update the artifact too` / `also editor has some changes in the wardrobe of living and dining of first floor`
+
+Notes on 81: the print `kids-bed` covers the room side of `g-north-rear` behind the two beds (4'-9" to 14'-3", floor to ceiling), cut round the window. Bed-wall wallpapers now go through one helper in `shell.js`, `wallpaper(print, walls, id, side, a0, a1, z0, z1)`: it cuts the wall's windows and doors out of the paper. A ground-floor wall already carries its floor level in `base`, so sills count from that and must not have the floor added again (the first try papered over the window). The guest room's wallpaper uses it too. The two paintings over the beds are gone (`K.skipArt()` keeps the count, see 76). The arched headboards span the whole wall and stand 4 ft high over the window's lower corners, so the drapes had been raised to clear them. Now, when furniture is in the way of drapes hung to the sill, the drapes still hang to the sill, in front of it: the rod and bracket arms stand off the wall by what `standOff()` measures on the pieces below (rays toward the wall), here 6½". `A.curtainList` rows now end with the hem height and the stand-off. The editor change was `wardrobe-3` (first-floor living and dining) starting at 12'-11" instead of 13'-0"; plan files are the editor's record and go into the build and the push as they are.
+
+Notes on 80: the ground-floor master's TV wall (on the room side of the wall at x 16'-3") is a panel 2" thick up to 8 ft in the print `tv-ground-master` (the design's height fills the panel, a slice of its width shows); the TV and console stand off its face. The hexagon panel's edges had been walnut, which reads as black, so every print panel is now one solid, `printPanel(print, ax, a0, a1, wall, dir, thick, z0, z1, fit)`: the print on the face runs on round the ends and over the top, so the 2" thickness is the same material. fit `'height'` fills the height and shows a centred slice of the width; a number tiles a seamless print at that many feet a repeat. All three TV panels use it (living room `tv-panel`, first-floor master `tex-hexwood`, ground-floor master `tv-ground-master`); it is passed to the ground floor in `K`.
+
+Notes on 79: there are two master bedrooms, so which one was asked. The first-floor master's TV wall is now a panel 2" thick up to 7 ft, faced with the print `tex-hexwood` (seamless, so it tiles: 6 ft across a repeat, about 9" a hexagon), its edges in walnut; the TV and console stand off its face. The bedroom door opens flat against that wall, and its edge would have met the thicker panel, so the panel runs 31'-7" to 38'-2" (was 31'-3" to 38'-6"), still centred on the bed. Faced panels go through one helper (now `printPanel`, see 80). A thicker panel or board on a wall: check what swings against that wall (door leaves open flat to it).
+
+Notes on 78: the TV panel is 2" deep (wall face to panel face); the print sits on its face, and the console, its plinth and the TV stand off the new face, so they all came forward by about 1". The drapes either side hang 2⅛" off the wall, so they still clear it.
+
+Notes on 77: `curtainFab` (print `tex-curtain`, 3 ft per repeat, made at 512 px since a fabric repeats often) on every curtain in the house, in place of each room's deeper palette colour; the room colours come back only if the print is missing. The drape is one model, 1 ft square, stretched to each panel, so a print on it would stretch with the panel: each drape gets its own texture coordinates in feet (`fabricUV`), so the weave is the same size on a narrow window and a wide door. This replaces the contrast rule of the earlier curtain request (the architect chose the fabric).
+
+Notes on 76: the narrow frame on the gallery face of `bedroom-east` (between the bedroom door and the window) is gone. Each painting's picture comes from its place in the hanging order, so a removed painting leaves `artN++` in its place and every other painting keeps its picture. (The guest room removal in 71 did not do this, so the ground-floor paintings after it moved on by one picture.)
+
+Notes on 75: the print `tv-panel` (from `blender/wallpaper/tv-panel.jpg`, 900 x 750, one print at the image's own proportions) faces the panel: its height fills the 8 ft, and the middle third of its width shows across the 3'-2" panel, about two of the design's six strips. The TV, the console and the curtains stay in front.
+
+Notes on 74: the TV panel on `rear-thin` (first-floor living, between the window and the glazed door) now stops at 8 ft instead of the ceiling. It takes the print `tv-panel` when that is there: the design's height fills the 8 ft and a centred slice of its width shows, so its shapes keep a true size instead of shrinking to the 3'-2" width; fluted otherwise. The image did not arrive as a file (see 66) and was sent again (75).
+
+Notes on 73: `joinery` (print `tex-veneer`) is now the oak veneer on door leaves, frames and linings and on window frames, the same in every style (the style no longer switches it to walnut or white paint). It repeats every 5 ft across and once per storey height up, so the grain runs up a door without a joint. Two earlier rules decided the follow-ups: doors and windows the same colour (so the windows followed), and no furniture the colour of the doors (so the furniture `oak` became a grey-washed oak, `wood(36, 10, 60)`). When a new finish lands on one thing, check the standing rules for anything it now clashes with and ask.
+
+Notes on 72: the print `guest-bed` (from `blender/wallpaper/guest-bed.jpg`, repeat mode, wall 13'-6" by 10'-11", aspect 1.2306) runs the design across the full width and repeats it down the height; the panel in `shell.js` shows it once the print is there, and a plain wall when it is not.
+
+Notes on 71: the guest bed's headboard is against `g-south`, so the wallpaper goes on the guest room side of that wall only (y 0'-9" to 14'-3", floor to ceiling, the skirting in front), as its own panel in `shell.js` reading the print `guest-bed`; the painting that hung over the bed is gone. The terrace's outdoor dining set under the pergola (round table and four chairs) is removed; the small table beside the terrace sofa stays. The image again did not arrive as a file (see 66) and was sent again (72).
+
+Notes on 70: `stairMarble` (print `tex-statuario`, 4 ft per repeat, polished, roughness 0.15) on every box of the main stair, treads, risers, sides and undersides of the steps and both landings, the same in every style. The front stair keeps `stair`, which follows each style's floor. A finish asked for one stair gets its own material key, because `stair` is shared by both stairs.
+
+Notes on 69: `brick` (print `tex-brick`, 2'-9" per repeat, not mirrored because the bond already tiles) on both faces of `g-north-porch` and `g-front-pier` (`{ mk: 'brick', face: 'both' }`, ends wrapped) and all round the pillar `gp-gate`. The name plate moves out by the slips' thickness so it sits on the brick.
+
+Notes on 68: `terrazzo` (print `tex-terrazzo`, 2'-6" per repeat, satin) is the roof floor, over the whole roof including the roof over the front balcony and the roof landing of the front stair.
+
+Notes on 65 and 67: the onyx floor (a print `tex-onyx` on every ground-floor room but the toilets) was built and then undone: the print, its material and its source copy were removed, and the ground floor is back on the house tile (`marble`).
+
+Notes on 64: `plaster` on the outer face of `g-kitchen-west`, and on the balcony side of the first-floor `front` wall from its north end up to `g-stair-north` (beyond that the wall faces the front stair). A finish can stop partway along a wall: `{ mk: 'plaster', range: [from, to] }` in `CLAD`, measured along the wall.
+
+Notes on 63: `felt` (print `tex-felt`, 3 ft per repeat) on the hall side of `g-bed-hall`, behind the hall sofa, stopping at the children's room door; the painting hangs in front. An inside wall has rooms on both sides, so its finish names the side: `{ mk: 'felt', face: 1 }` in `CLAD` (face -1 = the side at the lower x or y, +1 = the higher). Ask which side when a finish is asked for on an inside wall.
+
+Notes on 62: the texture became a print (`tex-plaster`, made at 512 px with the print script's size limit) and the `plaster` material, repeating every 2'-6" and mirrored so no seam shows. Outer finishes are now a map in `shell.js` (`CLAD`: wall or pillar -> `wpc` or `plaster`), or `"clad": "<material>"` on a wall or pillar in the plan file; the same outer-face rules apply to both.
 
 Notes on 52–54:
 - The roof over the front balcony is part of the roof: tiled, walkable, inside the 3 ft boundary wall. The boundary wall is left out where a wall of the floor below rises above the roof (the stair tower).

@@ -63,7 +63,7 @@ window.PLAN_DATA = {
   wardrobes: [
     {"id": "dress-wardrobe-1", "r": [22.625, 45.5833, 24.8333, 46.25], "face": "rear", "h": 7},
     {"id": "dress-wardrobe-2", "r": [27.25, 38.25, 29.6667, 46.25], "face": "north"},
-    {"id": "wardrobe-3", "r": [12.9999, 11.8334, 18.8332, 14.25], "face": "rear"},
+    {"id": "wardrobe-3", "r": [12.9166, 11.8334, 18.8332, 14.25], "face": "rear"},
     {"id": "wardrobe-4", "r": [22.5834, 38.2501, 23.8334, 40.2501], "face": "front", "h": 7},
     {"id": "wardrobe-5", "r": [25.1668, 45.9167, 26.9168, 46.25], "face": "rear", "mirror": true, "h": 7},
     {"id": "wardrobe-6", "r": [27.0834, 12.25, 29.6667, 14.25], "face": "rear"},
