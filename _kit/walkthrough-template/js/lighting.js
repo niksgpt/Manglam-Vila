@@ -171,7 +171,7 @@
     })();
     const haloMat = new T.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false });
     function spot(x, y, top, grp) {
-      B.box('glow', x - 0.17, y - 0.17, x + 0.17, y + 0.17, top - 0.045, top, grp);
+      B.box('downlight', x - 0.17, y - 0.17, x + 0.17, y + 0.17, top - 0.045, top, grp);
       const q = new T.PlaneGeometry(1.7, 1.7);
       q.rotateX(Math.PI / 2); // facing down
       q.translate(x, top - 0.06, y);
@@ -247,6 +247,8 @@
       lampScale = o.lamp;
       M.glow.emissiveIntensity = 2.2 * o.glow;
       M.glowSoft.emissiveIntensity = 0.9 * o.glow;
+      M.downlight.emissiveIntensity = 0.35 + 0.45 * o.glow; // warm white by day, brighter (still warm) at night
+      M.ceiling.emissiveIntensity = 0.1 + 0.32 * day;       // the white ceiling's lift: full by day, faint at night
       M.frost.emissiveIntensity = 0.5 * day;
       M.nbwin.emissiveIntensity = 1.5 * night;
       for (const k in base) M[k].envMapIntensity = base[k] * (k === 'glass' || k === 'railglass' ? 1 + 0.5 * night : 1);

@@ -6,7 +6,7 @@
   // wood = [hue, saturation %, lightness %]
   A.STYLES = {
     modern: {
-      label: 'Modern', wall: 0xf3f3f1, ceiling: 0xfbfbfa,
+      label: 'Modern', wall: 0xf3f3f1, ceiling: 0xffffff,
       floor: { kind: 'stone', base: '#d9d9d6', vein: '96,98,104', rough: 0.2 },
       bedfloor: [28, 12, 40], wood: [24, 20, 26], dark: [20, 8, 13], flute: ['#1f2022', '#4a4c50', '#35373a', '#17181a'],
       accent: { c: 0x1d1d1f, r: 0.38, m: 0.85 }, frame: 0x151516, cab: 0x2f3337, counter: 0xf4f4f2,
@@ -26,7 +26,7 @@
       clad: 0xf1ede5, pot: 0xe6e0d4, glow: 0xffe9c8,
     },
     luxury: {
-      label: 'Warm luxury', wall: 0xf2ede3, ceiling: 0xfaf8f4,
+      label: 'Warm luxury', wall: 0xf2ede3, ceiling: 0xffffff,
       floor: { kind: 'stone', base: '#e9e2d5', vein: '140,122,98', rough: 0.22 },
       bedfloor: [30, 36, 50], wood: [26, 44, 36], dark: [24, 30, 20], flute: ['#5f4029', '#a47550', '#8b603f', '#4b301d'],
       accent: { c: 0xc9a25a, r: 0.28, m: 1.0 }, frame: 0x2f2a27, cab: 0x8c9a84, counter: 0xf1eee8,

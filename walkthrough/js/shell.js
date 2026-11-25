@@ -368,7 +368,10 @@
         const spec = w.clad || CLAD[w.id], mk = spec && (typeof spec === 'string' ? spec : spec.mk), face = spec && spec.face;
         if (!mk || !M[mk]) continue;
         const T_ = THICK[mk] || 0.03;
-        const ax = w.ax, [x0, y0, x1, y1] = w.r, fl = w.base || 0, z0 = w.z[0], z1 = w.z[1];
+        const ax = w.ax, [x0, y0, x1, y1] = w.r, fl = w.base || 0, z0 = w.z[0];
+        // an outside finish runs on over the slab edge above the wall (to the top of the first-floor slab, or of the
+        // roof slab), so no band of floor shows between the storeys; a finish on one side of an inside wall stops at its top
+        const z1 = face && face !== 'both' ? w.z[1] : Math.abs(w.z[1] + SLAB) < 0.02 ? 0 : Math.abs(w.z[1] - H) < 0.02 ? H + SLAB : w.z[1];
         const lo = ax === 'x' ? x0 : y0, hi = ax === 'x' ? x1 : y1, t0 = ax === 'x' ? y0 : x0, t1 = ax === 'x' ? y1 : x1, mid = (lo + hi) / 2;
         const pt = (u, t) => (ax === 'x' ? [u, t] : [t, u]);
         const outside = (u, t) => { const [px, py] = pt(u, t); return !isIn(px, py, interior) && !isIn(px, py, wallRects.filter((r) => r !== w.r)); };
@@ -433,9 +436,14 @@
     for (const p of P.pillars) box(p.mat, p.r[0], p.r[1], p.r[2], p.r[3], p.z[0] === 0 ? -0.02 : p.z[0], p.z[1]);
 
     // --- slabs, floors, ceilings -------------------------------------------
-    for (const s of P.slabs) box('marble', s[0], s[1], s[2], s[3], -SLAB, -0.02);
+    // the slab's edges, wherever they show (outside walls between the floors, the void), are in the wall colour;
+    // a thin marble top under the room floors
+    // (in by 0.005 ft so its underside never shows as a hairline below the walls' outer faces)
+    for (const s of P.slabs) { box('wall', s[0] + 0.005, s[1] + 0.005, s[2] - 0.005, s[3] - 0.005, -SLAB, -0.03); box('marble', s[0], s[1], s[2], s[3], -0.03, -0.02); }
     for (const f of P.floors) box(f[4], f[0], f[1], f[2], f[3], -0.02, 0);
-    for (const c of P.ceilings) box('ceiling', c[0], c[1], c[2], c[3], H, H + SLAB, 'ceil');
+    // roof slab in the wall colour, the ceiling under it pulled in by 0.05 ft so its edge stays inside the walls
+    // (no white line along the facades)
+    for (const c of P.ceilings) { box('wall', c[0] + 0.005, c[1] + 0.005, c[2] - 0.005, c[3] - 0.005, H, H + SLAB, 'ceil'); box('ceiling', c[0] + 0.05, c[1] + 0.05, c[2] - 0.05, c[3] - 0.05, H - 0.02, H + 0.01, 'ceil'); }
 
     // --- main stair (round the void, joins the two floors) -------------------
     const TH = 0.56; // step thickness: reads as a folded-plate stair
@@ -502,7 +510,7 @@
       for (const a of GR.areaList) if (a.kind === 'porch') box('stone', a.r[0], a.r[1], a.r[2], a.r[3], PL - 0.6, PL - 0.02);
       for (const s of GR.steps) box('stone', s[0], s[1], s[2], s[3], PL - 0.3, GF + s[4]);
       // ceiling finish under the first floor slabs
-      for (const s of P.slabs) box('ceiling', s[0], s[1], s[2], s[3], -SLAB - 0.03, -SLAB);
+      for (const s of P.slabs) box('ceiling', s[0] + 0.05, s[1] + 0.05, s[2] - 0.05, s[3] - 0.05, -SLAB - 0.03, -SLAB + 0.01); // edge kept inside the walls
 
       // front stair, as drawn on the ground floor: up, round a winder landing, and back
       G = 'both';
@@ -602,10 +610,10 @@
       const c = s.c - e * s.n;
       if (s.dir === 'y') {
         glassRun([c, s.a - e, 0], [c, s.b + e, 0]);
-        box('fluted', Math.min(s.c, s.c + 0.045 * s.n), s.a, Math.max(s.c, s.c + 0.045 * s.n), s.b, -SLAB - 0.35, 0);
+        box('wall', Math.min(s.c, s.c + 0.045 * s.n), s.a, Math.max(s.c, s.c + 0.045 * s.n), s.b, -SLAB - 0.35, 0);
       } else {
         glassRun([s.a - e, c, 0], [s.b + e, c, 0]);
-        box('fluted', s.a, Math.min(s.c, s.c + 0.045 * s.n), s.b, Math.max(s.c, s.c + 0.045 * s.n), -SLAB - 0.35, 0);
+        box('wall', s.a, Math.min(s.c, s.c + 0.045 * s.n), s.b, Math.max(s.c, s.c + 0.045 * s.n), -SLAB - 0.35, 0);
       }
     }
     glassRun([20.29, 24.375 + e, 0], [26.125 + e, 24.375 + e, -8 * RISE], 0, 'both');      // flight 1

@@ -323,7 +323,9 @@
     tJaali.anisotropy = 4;
 
     M.wall = std({ color: 0xf2ede3, roughness: 0.93 });
-    M.ceiling = std({ color: 0xfaf8f4, roughness: 0.95 });
+    // pure white in every style; a faint neutral glow (set with the daylight in lighting.js) keeps it reading white,
+    // since a ceiling only gets the warm light bounced up from the floor and would otherwise match the walls
+    M.ceiling = std({ color: 0xffffff, roughness: 0.95, emissive: 0xffffff, emissiveIntensity: 0.4 });
     M.marble = std({ map: tMarble, roughness: 0.22, metalness: 0.0, envMapIntensity: 0.55 }); S.marble = 4;
     M.stair = std({ map: tMarble, color: 0xe8dcc8, roughness: 0.3, envMapIntensity: 0.5 }); S.stair = 4;
     M.bathfloor = std({ map: tBath, roughness: 0.45 }); S.bathfloor = 4;
@@ -420,6 +422,8 @@
     M.potWhite = std({ color: 0xe9e4da, roughness: 0.7 });
     M.glow = std({ color: 0xfff1d6, emissive: 0xffd9a0, emissiveIntensity: 2.2, roughness: 0.6 });
     M.glowSoft = std({ color: 0xfff1d6, emissive: 0xffd39a, emissiveIntensity: 0.9, roughness: 0.8 });
+    // recessed ceiling downlights: warm white, kept below glare so they read apart from the pure white ceiling
+    M.downlight = std({ color: 0xffe2b8, emissive: 0xffc27a, emissiveIntensity: 1.0, roughness: 0.5 });
     // context
     M.ground = std({ color: 0xa7a38f, roughness: 1 });
     M.road = std({ color: 0x4a4a4c, roughness: 1 });
