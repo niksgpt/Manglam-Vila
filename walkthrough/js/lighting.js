@@ -1,7 +1,9 @@
 /* Sky, sun and interior lights, driven by one time-of-day value:
    0 = morning, 0.3 = midday, 0.55 = late afternoon, 0.72 = sunset, 1 = night.
-   The sun travels east -> south -> west (the front of the house faces west, +z),
-   turns golden as it drops, and after dark the lamps and ceiling lights take over. */
+   The sun's direction at each moment is the site's own (js/site-data.js, made in Blender by
+   blender/sun_path.py: the equinox sun at the site's latitude and longitude, turned to the way
+   the house faces, rear to the SE at 132 deg); it turns golden as it drops, and after dark the
+   lamps and ceiling lights take over. */
 (function () {
   const A = (window.APP = window.APP || {});
   const T = THREE;
@@ -20,6 +22,9 @@
     { t: 0.88, h: 19.5, name: 'Evening', d: [-0.35, 0.62, -0.45], c: [0.62, 0.72, 1.0], i: 0.0, zen: [0.04, 0.06, 0.17], hor: [0.24, 0.17, 0.24], hs: [0.58, 0.60, 0.80], hemi: 0.16, lamp: 1.4, glow: 2.0, env: 0.16, st: 0.7 },
     { t: 1.00, h: 21.5, name: 'Night', d: [-0.35, 0.70, -0.40], c: [0.62, 0.72, 1.0], i: 0.5, zen: [0.012, 0.018, 0.05], hor: [0.05, 0.06, 0.12], hs: [0.55, 0.58, 0.80], hemi: 0.16, lamp: 1.5, glow: 2.2, env: 0.12, st: 1 },
   ];
+  // the site's sun (and moon) for each moment, where the site file is there
+  const SITE = window.SITE;
+  if (SITE && SITE.keys) for (const k of KEYS) { const s = SITE.keys.find((q) => q.name === k.name && Math.abs(q.h - k.h) < 0.01); if (s) k.d = s.d.slice(); }
   const lerp = (a, b, k) => a + (b - a) * k;
   const lerp3 = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)];
   function at(t) {

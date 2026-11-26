@@ -175,11 +175,26 @@
       if (kind !== 'lounge') { const p = soft('pillow', 1.1, 1.1, 0.4, R.main === fabm ? R.accent : R.main, 0, 1.3, -0.55); p.rotation.x = -0.3; g.add(p); }
       return g;
     }
-    function bedR(R, twin) { // the room's bed with layered bedding: white sheets, a pale duvet, a throw
+    /* the room's bed with layered bedding: white sheets, a pale duvet, a throw. size: [width, length] of the
+       mattress in feet (as beds are sold: 6 x 6, 6 x 6.5), the frame and headboard round it; the headboard
+       stays where it was, the bed shortens or lengthens at its foot. userData.footIn: how far the foot moved in. */
+    function bedR(R, twin, size) {
       const kind = twin ? 'arch' : R.bed || 'panel', name = 'bed_' + kind, W = twin ? 3.4 : 6, L = twin ? 6.5 : 6.75, top = 1.75;
       if (!has(name)) return bed();
-      const g = new T.Group();
+      const outer = new T.Group(), g = new T.Group();
+      outer.add(g);
       g.add(A.model(name, { head: R.main, base: R.main, mattress: M.fabWhite, leg: R.wood }));
+      outer.userData.footIn = 0;
+      if (size) {
+        const box = (r) => { const p = A.modelParts(name).find((q) => q.r === r); if (!p) return null; p.geo.computeBoundingBox(); return p.geo.boundingBox; };
+        const mat = box('mattress'), head = box('head'), base = box('base');
+        if (mat && head) {
+          const kx = size[0] / (mat.max.x - mat.min.x), kz = size[1] / (mat.max.z - mat.min.z), zh = head.min.z, zf = Math.max(mat.max.z, base ? base.max.z : mat.max.z);
+          outer.scale.set(kx, 1, kz);
+          g.position.z = (zh * (1 - kz)) / kz; // the headboard's back stays put
+          outer.userData.footIn = (1 - kz) * (zf - zh);
+        }
+      }
       const dv = bedding(twin ? 'bedding_twin' : 'bedding', R.duvet, R.throw, top, -L / 2 + 0.05);
       if (dv) g.add(dv); else g.add(rb(W + 0.2, 0.26, L * 0.6, 0.1, R.duvet, 0, top - 0.05, L / 2 - L * 0.3 + 0.08));
       const sides = twin ? [0] : [-1, 1];
@@ -188,7 +203,7 @@
         const q = soft('pillow', twin ? 1.4 : 1.8, 0.95, 0.42, sx < 0 ? R.second : R.main, sx * 1.25, top + 0.02, -L / 2 + 1.12); q.rotation.x = -0.36; g.add(q);
       }
       if (!twin) { const lum = soft('pillow', 2.0, 0.7, 0.36, R.accent, 0, top + 0.05, -L / 2 + 1.55); lum.rotation.x = -0.4; g.add(lum); }
-      return g;
+      return outer;
     }
     function benchR(R) {
       if (!has('bench')) return bench(R.main);
@@ -837,8 +852,8 @@
     // ===== Master bedroom =====================================================
     // design: greige channel-tufted bed, taupe, oak, white marble
     const RM = room('fMaster');
-    put(bedR(RM), 18.6, 34.9, -90);
-    put(benchR(RM), 14.1, 34.9, -90);
+    const bedM = put(bedR(RM, false, [6, 6.5]), 18.6, 34.9, -90); // a 6' x 6'-6" bed, the 6' side on the wall
+    put(benchR(RM), 14.1 + bedM.userData.footIn, 34.9, -90);       // the bench stays at the bed's foot
     put(nightstand(RM), 21.4, 30.75, -90);
     put(nightstand(RM), 21.4, 39.05, -90);
     pendant(21.4, 30.75, 4.9, 0.3, null);

@@ -594,6 +594,17 @@
         seg(cur, end);
       }
       for (const p of pillarList) gx.fillRect(MX(p.r[0]), MY(p.r[1]), (p.r[2] - p.r[0]) * MS, (p.r[3] - p.r[1]) * MS);
+      // north arrow in the corner, true north from the site file (the plan's rear faces SITE.rearBearing)
+      if (window.SITE) {
+        const b = (window.SITE.rearBearing * Math.PI) / 180, nx = -Math.sin(b), ny = -Math.cos(b), cx = 13, cy = 13, r = 9;
+        gx.save(); gx.globalAlpha = 0.9;
+        gx.strokeStyle = '#d2a85c'; gx.lineWidth = 1; gx.beginPath(); gx.arc(cx, cy, r, 0, 6.3); gx.stroke();
+        gx.fillStyle = '#c0533e'; gx.beginPath(); gx.moveTo(cx + nx * r, cy + ny * r); gx.lineTo(cx - ny * 3, cy + nx * 3); gx.lineTo(cx + ny * 3, cy - nx * 3); gx.closePath(); gx.fill();
+        gx.fillStyle = '#d2a85c'; gx.beginPath(); gx.moveTo(cx - nx * r, cy - ny * r); gx.lineTo(cx - ny * 3, cy + nx * 3); gx.lineTo(cx + ny * 3, cy - nx * 3); gx.closePath(); gx.fill();
+        gx.fillStyle = '#efe6d6'; gx.font = 'bold 8px sans-serif'; gx.textAlign = 'center'; gx.textBaseline = 'middle';
+        gx.fillText('N', cx + nx * (r + 7), cy + ny * (r + 7));
+        gx.restore();
+      }
       return c;
     }
     const baseF = drawBase(P.floors, P.walls, P.pillars, 0, 'high');

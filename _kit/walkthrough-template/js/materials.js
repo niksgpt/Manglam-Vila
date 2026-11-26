@@ -384,6 +384,7 @@
     // the gate pier's name plate: polished dark stone, brass lettering (the same in every style)
     M.plaque = std({ color: 0x23201d, roughness: 0.22, metalness: 0.1, envMapIntensity: 0.9 });
     M.gilt = std({ color: 0xc9a45c, roughness: 0.28, metalness: 1.0 });
+    M.compassRed = std({ color: 0x9a3a2b, roughness: 0.4 }); // the north point of the compass rose
     M.marbleW = std({ map: tex(512, (g, s, R) => marble(g, s, R, '#f1efeb', '118,116,114', 2, 2), 29), roughness: 0.16, envMapIntensity: 0.6 }); S.marbleW = 3;
     M.fluted = std({ map: tFlute, roughness: 0.6 }); S.fluted = 2.2;
     M.frame = std({ color: 0x2f2a27, roughness: 0.45, metalness: 0.6 });

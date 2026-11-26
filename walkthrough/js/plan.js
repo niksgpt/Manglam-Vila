@@ -346,7 +346,8 @@
     // the car porch is drawn as a few rectangles: its caption gives the whole porch, as on the drawing
     for (const a of gareas) grooms.push({ name: a.name, size: a.kind === 'porch' ? "11'-7½\" × 14'-6\" · 169 sq ft" : ft(a.r[2] - a.r[0]) + ' × ' + ft(a.r[3] - a.r[1]), r: a.r, area: true });
     grooms.push({ name: 'Front Stair', size: 'to the first floor and the roof', r: [19, 47, 29.625, 52.75] });
-    grooms.push({ name: 'Road', size: "in front of the house (west) · plot 30' × 54'-6\"", r: [-40, 54.5, 70, 78] });
+    const FRONT_DIR = window.SITE ? window.SITE.sides.front.name : 'W';   // the road side, from the site file
+    grooms.push({ name: 'Road', size: "in front of the house (" + FRONT_DIR + ") · plot 30' × 54'-6\"", r: [-40, 54.5, 70, 78] });
 
     // Where you can stand on the ground floor.
     const ramp = (y0, y1) => (x, y) => GF + PORCH * clamp01((y - y0) / (y1 - y0));

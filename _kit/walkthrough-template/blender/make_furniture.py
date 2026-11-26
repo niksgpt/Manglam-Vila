@@ -873,6 +873,78 @@ def make_nameplate():
     add_model('nameplate', [('plate', plate), ('letters', join(parts + [letters], 'brass'))], recentre=False)
 
 
+def make_compass():
+    """A compass rose laid in the ground beside the house: a round stone disc, a gilt ring, eight inlaid
+    points (the four main ones gilt, the four between them dark, north in red) and the letters N, E, S, W
+    lying flat by the rim. North toward Blender +y (the walkthrough's -z); the walkthrough turns it to
+    true north. Radius 4 ft, base on y = 0."""
+    reset()
+    R, T0 = 4.0, 0.06
+    bpy.ops.mesh.primitive_cylinder_add(vertices=72, radius=R, depth=T0, location=(0, 0, T0 / 2))
+    disc = bpy.context.active_object
+    disc.name = 'disc'
+    for p in disc.data.polygons:
+        p.use_smooth = False
+    top = T0 + 0.004
+
+    def ring(r0, r1, h):
+        bm = bmesh.new()
+        n = 72
+        for k in range(n):
+            a0, a1 = 2 * PI * k / n, 2 * PI * (k + 1) / n
+            vs = [bm.verts.new((r * math.cos(a), r * math.sin(a), z)) for r, a, z in
+                  ((r0, a0, top), (r1, a0, top), (r1, a1, top), (r0, a1, top),
+                   (r0, a0, top + h), (r1, a0, top + h), (r1, a1, top + h), (r0, a1, top + h))]
+            for f in ((4, 5, 6, 7), (1, 2, 6, 5), (0, 4, 7, 3)):
+                bm.faces.new([vs[i] for i in f])
+        return from_bmesh('ring', bm, smooth=False)
+
+    def point(ang, L, w, h):
+        """One point of the star: a long rhombus from the centre to the tip, ridged along its middle."""
+        bm = bmesh.new()
+        d = Vector((math.sin(ang), math.cos(ang), 0))       # bearing ang from north (+y), clockwise
+        n = Vector((d.y, -d.x, 0))
+        c = bm.verts.new((0, 0, top + h))
+        tip = bm.verts.new(tuple(d * L + Vector((0, 0, top + 0.004))))
+        lft = bm.verts.new(tuple(d * (L * 0.18) - n * w + Vector((0, 0, top + 0.004))))
+        rgt = bm.verts.new(tuple(d * (L * 0.18) + n * w + Vector((0, 0, top + 0.004))))
+        bm.faces.new((c, tip, lft))   # wound to face up
+        bm.faces.new((c, rgt, tip))
+        return from_bmesh('point', bm, smooth=False)
+
+    gilt = [ring(2.95, 3.08, 0.02), ring(1.15, 1.22, 0.015)]
+    dark, north = [], None
+    for k in range(8):
+        ang = k * PI / 4
+        if k % 2:
+            dark.append(point(ang, 2.0, 0.34, 0.05))
+        elif k == 0:
+            north = point(ang, 2.95, 0.46, 0.08)
+        else:
+            gilt.append(point(ang, 2.95, 0.46, 0.08))
+    # letters, flat on the disc between the ring and the rim, upright with north at the top
+    letters = []
+    for ch, (x, y) in (('N', (0, 3.5)), ('E', (3.5, 0)), ('S', (0, -3.5)), ('W', (-3.5, 0))):
+        cu = bpy.data.curves.new(ch, 'FONT')
+        cu.body = ch
+        for fp in ('C:/Windows/Fonts/georgiab.ttf', 'C:/Windows/Fonts/timesbd.ttf', 'C:/Windows/Fonts/arialbd.ttf'):
+            if os.path.exists(fp):
+                cu.font = bpy.data.fonts.load(fp, check_existing=True)
+                break
+        cu.align_x, cu.align_y = 'CENTER', 'CENTER'
+        cu.size, cu.extrude, cu.resolution_u = 0.62 if ch == 'N' else 0.5, 0.008, 3
+        txt = link(bpy.data.objects.new(ch, cu))
+        txt.location = (x, y, top + 0.008)
+        bpy.context.view_layer.update()
+        me = bpy.data.meshes.new_from_object(txt.evaluated_get(bpy.context.evaluated_depsgraph_get()))
+        lo = link(bpy.data.objects.new('letter', me))
+        lo.matrix_world = txt.matrix_world.copy()
+        bpy.data.objects.remove(txt)
+        letters.append(lo)
+    add_model('compass', [('base', disc), ('inlay', join(gilt, 'inlay')), ('dark', join(dark, 'dark')),
+                          ('north', north), ('letters', join(letters, 'letters'))])
+
+
 # --------------------------------------------------------------------------------------------
 STEPS = [
     ('seat', make_seat), ('back', make_back), ('pillows', make_pillows),
@@ -883,6 +955,7 @@ STEPS = [
     ('lamps', make_lamps),
     ('fittings', make_fittings),
     ('nameplate', make_nameplate),
+    ('compass', make_compass),
     ('sofas', make_sofas), ('lounge chair', make_lounge_chair), ('beds', make_beds), ('dining', make_dining),
     ('tables', make_tables), ('cases', make_cases), ('decor', make_decor), ('curtains', make_curtains),
 ]

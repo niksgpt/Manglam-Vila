@@ -156,7 +156,7 @@
     // ===== Guest bedroom ==========================================================
     // design: dove grey and charcoal, oak, white marble
     const RG = K.room('gGuest');
-    put(K.bedR(RG), 26.0, 6.5, -90);
+    put(K.bedR(RG, false, [6, 6]), 26.0, 6.5, -90); // a 6' x 6' bed
     put(K.nightstand(RG), 28.8, 2.0, -90);
     put(K.nightstand(RG), 28.8, 11.0, -90);
     pendant(28.8, 2.0, 4.9, 0.3, null);
@@ -190,8 +190,8 @@
     // ===== Master bedroom ==========================================================
     // design: mushroom wingback and champagne, honey teak, travertine
     const RB = K.room('gMaster');
-    put(K.bedR(RB), 25.45, 38.9, -90);
-    put(K.benchR(RB), 21.2, 38.9, -90);
+    const bedB = put(K.bedR(RB, false, [6, 6]), 25.45, 38.9, -90); // a 6' x 6' bed
+    put(K.benchR(RB), 21.2 + bedB.userData.footIn, 38.9, -90); // the bench stays at the bed's foot
     put(K.nightstand(RB, 0.9), 28.4, 34.55, -90);
     put(K.nightstand(RB, 0.9), 28.4, 43.25, -90);
     pendant(28.4, 34.55, 4.9, 0.3, null);

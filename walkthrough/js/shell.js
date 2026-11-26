@@ -721,6 +721,9 @@
     cb('ground', -140, -120, 170, 54.5, E - 2, E - 0.3);
     cb('road', -140, 54.5, 170, 78, E - 2, E - 0.45);
     cb('ground', -140, 78, 170, 200, E - 2, E - 0.3);
+    // a compass rose in the ground off the house's NE side (modelled in Blender), turned to true north
+    // from the site file (js/site-data.js: the rear faces SITE.rearBearing degrees from north)
+    if (HAS('compass') && window.SITE) piece('compass', { base: 'travertine', inlay: 'gilt', dark: 'plaque', north: 'compassRed', letters: 'plaque' }, -9, 10, E - 0.3, (window.SITE.rearBearing * Math.PI) / 180, 1, 1, 1, 'ctx');
     if (!GR) {
       // compound wall and gate piers, as drawn at the front of the plot
       cb('stone', 15.88, 54.1, 30.375, 54.5, GF - 0.3, GF + 5);

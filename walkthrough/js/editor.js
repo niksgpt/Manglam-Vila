@@ -9,6 +9,11 @@
   const BASE = GROUND ? window.PLAN_DATA_GROUND : window.PLAN_DATA, KEY = GROUND ? A.PLAN_KEY_G : A.PLAN_KEY;
   const FILE = GROUND ? 'plan-data-ground.js' : 'plan-data.js', VAR = GROUND ? 'PLAN_DATA_GROUND' : 'PLAN_DATA', QS = GROUND ? '?floor=ground' : '';
   const PV = GROUND ? A.plan.ground : A.plan;   // this floor's fixed parts (room floors, room names)
+  // the compass: the true directions of the plan's sides, from the site file (js/site-data.js, made in
+  // Blender); without it, the old fixed labels (rear east, road west)
+  const BEARING = window.SITE ? window.SITE.rearBearing : 90, NAMES8 = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  const dir8 = (b) => NAMES8[Math.floor(((((b % 360) + 360) % 360) + 22.5) / 45) % 8];
+  const SIDE = { rear: dir8(BEARING), front: dir8(BEARING + 180), xLow: dir8(BEARING - 90), xHigh: dir8(BEARING + 90) };
   const AREA_NAMES = { void: 'Double-height opening', terrace: 'Terrace', balcony: 'Balcony', porch: 'Car porch', platform: 'Raised floor (lobby / walkway)', court: 'Open court' };
   const $ = (id) => document.getElementById(id);
   const svg = $('svg'), world = $('world');
@@ -192,8 +197,14 @@
         seen[a.name] = 1;
         label(String(a.name).replace(/</g, '&lt;'), (a.r[0] + a.r[2]) / 2, (a.r[1] + a.r[3]) / 2);
       }
-      out.push(`<text x="14.5" y="${54.5 + 20 * u}" font-size="${11 * u}" text-anchor="middle" fill="#8a7f70" style="pointer-events:none">ROAD (west) ↓</text>`);
-      out.push(`<text x="14.5" y="${-2 - 10 * u}" font-size="${11 * u}" text-anchor="middle" fill="#8a7f70" style="pointer-events:none">↑ REAR (east)   ·   ← north   south →</text>`);
+      out.push(`<text x="14.5" y="${54.5 + 20 * u}" font-size="${11 * u}" text-anchor="middle" fill="#8a7f70" style="pointer-events:none">ROAD (${SIDE.front}) ↓</text>`);
+      out.push(`<text x="14.5" y="${-2 - 10 * u}" font-size="${11 * u}" text-anchor="middle" fill="#8a7f70" style="pointer-events:none">↑ REAR (${SIDE.rear})   ·   ← ${SIDE.xLow}   ${SIDE.xHigh} →</text>`);
+      // north arrow beside the plan (true north from the site file)
+      { const b = (BEARING * Math.PI) / 180, nx = -Math.sin(b), ny = -Math.cos(b), cx = -4.3, cy = 6, r = 2.3;
+        out.push(`<g style="pointer-events:none"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#b8a88e" stroke-width="${0.8 * u}"/>`
+          + `<path d="M${cx + nx * r} ${cy + ny * r} L${cx - ny * 0.8} ${cy + nx * 0.8} L${cx + ny * 0.8} ${cy - nx * 0.8} Z" fill="#b8503c"/>`
+          + `<path d="M${cx - nx * r} ${cy - ny * r} L${cx - ny * 0.8} ${cy + nx * 0.8} L${cx + ny * 0.8} ${cy - nx * 0.8} Z" fill="#cdbf9f"/>`
+          + `<text x="${cx + nx * (r + 1.3)}" y="${cy + ny * (r + 1.3)}" font-size="${12 * u}" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#8a5a40">N</text></g>`); }
     }
     const hit = `stroke="transparent" stroke-width="${9 * u}" style="cursor:pointer"`;
     // walls of the ground floor that run up through this floor, with their openings at this level
@@ -295,10 +306,10 @@
       const w = it, x = w.ax === 'x', [a0] = across(w);
       title = 'Wall';
       field('id', 'Name', w.id, 'text');
-      field('start', x ? 'Start (X, north end)' : 'Start (Y, rear end)', lo(w));
-      field('end', x ? 'End (X, south end)' : 'End (Y, front end)', hi(w));
+      field('start', x ? `Start (X, ${SIDE.xLow} end)` : 'Start (Y, rear end)', lo(w));
+      field('end', x ? `End (X, ${SIDE.xHigh} end)` : 'End (Y, front end)', hi(w));
       field('len', 'Length', hi(w) - lo(w));
-      field('pos', x ? 'Position (Y, from rear)' : 'Position (X, from north)', w.r[a0]);
+      field('pos', x ? 'Position (Y, from rear)' : `Position (X, from ${SIDE.xLow})`, w.r[a0]);
       field('th', 'Thickness', w.r[across(w)[1]] - w.r[a0]);
       const hk = !w.z ? 'full' : isLow(w) ? 'low' : GROUND && w.z[0] === 0 && w.z[1] === 'ROOF' ? 'roof' : 'custom';
       const kinds = { full: 'Floor to ceiling', low: 'Low wall', custom: 'Set bottom and top' };
@@ -315,7 +326,7 @@
           : A.RAIL_KINDS[w.rail] ? 'No railing shows: the wall must start at the floor and be lower than the railing top.'
           : 'Automatic: a low wall (under 3 ft) along a terrace or balcony gets that area\'s railing on top.' });
       }
-      rows.push({ note: x ? 'Runs north to south.' : 'Runs rear to front.' });
+      rows.push({ note: x ? `Runs ${SIDE.xLow} to ${SIDE.xHigh}.` : 'Runs rear to front.' });
     } else if (sel.kind === 'op') {
       const o = it, w = plan.walls[sel.i], x = w.ax === 'x';
       title = TYPES[o.type];
@@ -325,9 +336,9 @@
       if (o.type === 'win' || o.type === 'vent') field('sill', 'Sill height', o.sill);
       field('head', 'Top height', o.head);
       if (o.type === 'door' || o.type === 'gdoor') {
-        field('swing', 'Opens toward', String(o.swing > 0 ? 1 : -1), 'select', x ? { '-1': 'Rear (east)', 1: 'Road (west)' } : { '-1': 'North', 1: 'South' });
+        field('swing', 'Opens toward', String(o.swing > 0 ? 1 : -1), 'select', x ? { '-1': `Rear (${SIDE.rear})`, 1: `Road (${SIDE.front})` } : { '-1': SIDE.xLow + ' side', 1: SIDE.xHigh + ' side' });
         field('leaves', 'Leaves', o.leaves === 2 ? '2' : '1', 'select', { 1: 'Single door', 2: 'Double door (two leaves)' });
-        if (o.leaves !== 2) field('hinge', 'Hinge at', o.hinge || 'a', 'select', x ? { a: 'North side', b: 'South side' } : { a: 'Rear side', b: 'Front side' });
+        if (o.leaves !== 2) field('hinge', 'Hinge at', o.hinge || 'a', 'select', x ? { a: SIDE.xLow + ' side', b: SIDE.xHigh + ' side' } : { a: 'Rear side', b: 'Front side' });
         field('isOpen', 'Shown in 3D', o.isOpen ? '1' : '0', 'select', { 1: 'Open', 0: 'Closed' });
       }
       if ((o.sill || 0) > plan.H) rows.push({ note: 'This opening is on the floor above (the wall runs up through it).' });
@@ -336,11 +347,11 @@
       const w = it;
       title = 'Wardrobe';
       field('id', 'Name', w.id, 'text');
-      field('x', 'X (north side)', w.r[0]);
+      field('x', `X (${SIDE.xLow} side)`, w.r[0]);
       field('y', 'Y (rear side)', w.r[1]);
-      field('pw', 'Size north to south', w.r[2] - w.r[0]);
+      field('pw', `Size ${SIDE.xLow} to ${SIDE.xHigh}`, w.r[2] - w.r[0]);
       field('pd', 'Size rear to front', w.r[3] - w.r[1]);
-      field('face', 'Doors face', w.face || 'rear', 'select', { rear: 'Rear (east)', front: 'Road (west)', north: 'North', south: 'South' });
+      field('face', 'Doors face', w.face || 'rear', 'select', { rear: `Rear (${SIDE.rear})`, front: `Road (${SIDE.front})`, north: SIDE.xLow + ' side', south: SIDE.xHigh + ' side' });
       field('tall', 'Height', w.h ? 'custom' : 'full', 'select', { full: 'Up to the ceiling', custom: 'Set a height' });
       if (w.h) field('wh', 'Wardrobe height', w.h);
       field('mirror', 'Mirror on doors', w.mirror ? '1' : '0', 'select', { 0: 'No', 1: 'Yes' });
@@ -349,9 +360,9 @@
       const a = it, isVoid = a.kind === 'void';
       title = AREA_NAMES[a.kind] || 'Open area';
       field('name', 'Name', a.name, 'text');
-      field('x', 'X (north edge)', a.r[0]);
+      field('x', `X (${SIDE.xLow} edge)`, a.r[0]);
       field('y', 'Y (rear edge)', a.r[1]);
-      field('pw', 'Width (north to south)', a.r[2] - a.r[0]);
+      field('pw', `Width (${SIDE.xLow} to ${SIDE.xHigh})`, a.r[2] - a.r[0]);
       field('pd', 'Depth (rear to front)', a.r[3] - a.r[1]);
       if (!isVoid && !GROUND && (a.kind === 'terrace' || a.kind === 'balcony')) {
         field('rail', 'Railing on open sides', A.RAIL_KINDS[a.rail] ? a.rail : 'jaali', 'select', A.RAIL_KINDS);
@@ -363,9 +374,9 @@
       const p = it;
       title = 'Pillar';
       field('id', 'Name', p.id, 'text');
-      field('x', 'X (north face)', p.r[0]);
+      field('x', `X (${SIDE.xLow} face)`, p.r[0]);
       field('y', 'Y (rear face)', p.r[1]);
-      field('pw', 'Width (north to south)', p.r[2] - p.r[0]);
+      field('pw', `Width (${SIDE.xLow} to ${SIDE.xHigh})`, p.r[2] - p.r[0]);
       field('pd', 'Depth (rear to front)', p.r[3] - p.r[1]);
       field('kind', 'Height', p.z ? 'custom' : 'full', 'select', { full: 'Floor to ceiling', custom: 'Set bottom and top' });
       if (p.z) { const zr = zRange(p, [0, plan.H]); field('zb', 'Bottom', zr[0]); field('zt', 'Top', zr[1]); rows.push({ note: levelHint() }); }
